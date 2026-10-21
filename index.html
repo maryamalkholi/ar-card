@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#5B7060">
+<title>Maryam Alkholi · AR Card</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500&family=Inter:wght@400;600&display=swap">
+<style>
+  :root { --sage:#5B7060; --cream:#F6F2EA; --ink:#22261F; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; background:#000; overflow:hidden; font-family:Inter, "Segoe UI", system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color:transparent; }
+  #ar { position:fixed; inset:0; overflow:hidden; }
+
+  /* Start screen */
+  #start { position:fixed; inset:0; z-index:50; background:var(--sage); color:var(--cream); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding:24px; text-align:center; }
+  #start img { width:120px; height:120px; border-radius:50%; object-fit:cover; border:4px solid var(--cream); }
+  #start h1 { margin:0; font:500 32px/1.1 "Cormorant Garamond", Garamond, Georgia, serif; }
+  #start p { margin:0; max-width:30ch; opacity:.85; line-height:1.5; }
+  #go { margin-top:8px; border:0; border-radius:99px; padding:16px 34px; background:var(--cream); color:var(--ink); font:600 16px Inter, system-ui, sans-serif; cursor:pointer; }
+  #start .err { color:#FFE1D6; font-size:14px; }
+
+  /* Hint while the card isn't being tracked */
+  #hint { position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:40; background:rgba(20,24,20,.75); color:#fff; font-size:14px; padding:10px 16px; border-radius:99px; white-space:nowrap; pointer-events:none; transition:opacity .3s; }
+  #hint.off { opacity:0; }
+
+  /* AR layers. 1 CSS px here = 1/390 of the card width (each layer is scaled up to the card). */
+  .ar-el { visibility:hidden; }
+  .pop { transform:scale(.6); opacity:0; transition:transform .55s cubic-bezier(.34,1.56,.64,1), opacity .3s; }
+  .on .pop { transform:none; opacity:1; }
+
+  .face { width:96px; height:146px; }
+  .face .pop { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .face img { width:92px; height:92px; border-radius:50%; object-fit:cover; display:block; border:3px solid #fff; box-shadow:0 6px 16px rgba(0,0,0,.35); background:#ccc; }
+  .face .name { color:#fff; font:500 19px/1.05 "Cormorant Garamond", Garamond, Georgia, serif; text-align:center; text-shadow:0 2px 8px rgba(0,0,0,.6); }
+
+  .site { width:390px; height:596px; }
+  .site .pop { width:100%; height:100%; border-radius:16px; overflow:hidden; background:#fff; box-shadow:0 10px 30px rgba(0,0,0,.4); display:flex; flex-direction:column; transition-delay:.08s; }
+  .site .bar { flex:none; height:36px; display:flex; align-items:center; gap:8px; padding:0 12px; background:#EDE9E1; color:#4A5148; font-size:12px; }
+  .site .bar span { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .site .bar a { color:inherit; font-size:12px; font-weight:600; text-decoration:none; padding:4px 8px; border-radius:6px; background:#fff; }
+  .site iframe { flex:1; width:100%; border:0; background:#fff; }
+
+  .socials { width:390px; height:48px; }
+  .socials .row { display:flex; gap:8px; height:100%; }
+  .socials a { flex:1; display:flex; align-items:center; justify-content:center; gap:7px; border-radius:99px; background:#fff; color:var(--ink); text-decoration:none; font-size:14px; font-weight:600; box-shadow:0 6px 16px rgba(0,0,0,.3); }
+  .socials a:nth-child(2) { transition-delay:.16s; }
+  .socials a:nth-child(3) { transition-delay:.24s; }
+  .socials a:nth-child(1) { transition-delay:.1s; }
+  .socials svg { width:18px; height:18px; flex:none; }
+</style>
+<script type="importmap">
+{ "imports": {
+    "three": "./vendor/three/three.module.js",
+    "three/addons/": "./vendor/three/addons/"
+} }
+</script>
+</head>
+<body>
+<div id="ar"></div>
+
+<div id="start">
+  <img src="assets/face.png" alt="Maryam Alkholi">
+  <h1>Maryam Alkholi</h1>
+  <p>Hold the QR side of the card in the middle of your camera view.</p>
+  <button id="go" type="button">Start AR</button>
+  <p class="err" id="err" hidden></p>
+</div>
+<div id="hint" class="off">Center the card in your camera view</div>
+
+<!-- AR content (moved onto the card by the script) -->
+<div class="ar-el face" id="face"><div class="pop"><img src="assets/face.png" alt="Maryam Alkholi"><span class="name">Maryam<br>Alkholi</span></div></div>
+
+<div class="ar-el site" id="site"><div class="pop">
+  <div class="bar"><span>maryamalkholi.github.io/portfolio-</span><a href="https://maryamalkholi.github.io/portfolio-/" target="_blank" rel="noopener">Open ↗</a></div>
+  <iframe id="frame" title="Maryam Alkholi portfolio" loading="eager"></iframe>
+</div></div>
+
+<div class="ar-el socials" id="socials"><div class="row">
+  <a class="pop" href="https://www.linkedin.com/in/maryam-alkholi/" target="_blank" rel="noopener">
+    <svg viewBox="0 0 24 24"><path fill="#0A66C2" d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg>LinkedIn</a>
+  <a class="pop" href="https://github.com/maryamalkholi" target="_blank" rel="noopener">
+    <svg viewBox="0 0 24 24"><path fill="#181717" d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57l-.02-2.04c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.8 1.3 3.49 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .32.21.69.82.57A12 12 0 0 0 12 .3"/></svg>GitHub</a>
+  <a class="pop" href="https://manabo.itch.io/" target="_blank" rel="noopener">
+    <svg viewBox="0 0 24 24"><g fill="none" stroke="#FA5C5C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12h4M8 10v4M15 13h.01M18 11h.01"/><rect x="2" y="6" width="20" height="12" rx="6"/></g></svg>itch.io</a>
+</div></div>
+
+<script type="module">
+  import * as THREE from "three";
+  import { CSS3DObject } from "three/addons/renderers/CSS3DRenderer.js";
+
+  const PORTFOLIO = "https://maryamalkholi.github.io/portfolio-/";
+
+  // Card layout in AR units: the card is 1000 wide and 571 tall, centred on (0,0), y points up.
+  const CARD_H = 1000 / 1.75;
+  const K = 1000 / 390;          // every layer is 390 CSS px wide = card width
+  const GAP = 45;
+  const LAYOUT = {
+    face:    { x: 500 - 40 + (96 * K) / 2, y: CARD_H / 2 - (146 * K) / 2 + 20 },  // beside the card, at its right edge
+    site:    { x: 0, y: CARD_H / 2 + GAP + (596 * K) / 2 },        // above the card
+    socials: { x: 0, y: -CARD_H / 2 - GAP - (48 * K) / 2 }         // below the card
+  };
+
+  const startEl = document.getElementById("start");
+  const hint = document.getElementById("hint");
+  const errEl = document.getElementById("err");
+  const els = ["face", "site", "socials"].map(id => document.getElementById(id));
+
+  // Start loading the site straight away so it's ready when the card is found.
+  document.getElementById("frame").src = PORTFOLIO;
+
+  if (new URLSearchParams(location.search).has("sim")) await import("../tools/sim-camera.js");
+
+  document.getElementById("go").addEventListener("click", async () => {
+    errEl.hidden = true;
+    try {
+      await import("./vendor/mindar/mindar-image-three.prod.js");
+      await startAR();
+      startEl.remove();
+    } catch (e) {
+      console.error(e);
+      errEl.textContent = "Couldn't open the camera. Allow camera access for this page and try again.";
+      errEl.hidden = false;
+    }
+  });
+
+  async function startAR() {
+    const mindar = new window.MINDAR.IMAGE.MindARThree({
+      container: document.getElementById("ar"),
+      imageTargetSrc: "./assets/card.mind",
+      uiScanning: "no",
+      filterMinCF: 0.0001,   // smoothing: steadier content, easier to scroll and tap
+      filterBeta: 0.001
+    });
+    window.mindar = mindar;   // handy for debugging in the browser console
+    const { renderer, cssRenderer, scene, cssScene, camera } = mindar;
+
+    const anchor = mindar.addCSSAnchor(0);
+    els.forEach((el, i) => {
+      const obj = new CSS3DObject(el);
+      const p = LAYOUT[el.id];
+      obj.position.set(p.x, p.y, 1);
+      obj.scale.set(K, K, K);
+      anchor.group.add(obj);
+    });
+
+    // When the card is lost, keep the content where it was last seen so it stays usable.
+    let last = null, everFound = false;
+    anchor.onTargetFound = () => {
+      everFound = true;
+      document.body.classList.add("tracking");
+      els.forEach(el => el.classList.add("on"));
+      hint.classList.add("off");
+    };
+    anchor.onTargetLost = () => {
+      hint.textContent = "Point at the card to re-attach";
+      hint.classList.remove("off");
+    };
+    anchor.onTargetUpdate = () => {
+      if (anchor.visible) {
+        last = anchor.group.matrix.clone();
+      } else if (last) {
+        anchor.group.matrix.copy(last);
+        els.forEach(el => el.style.visibility = "visible");
+      }
+    };
+
+    await mindar.start();
+    if (window.__simCanvas) {                 // test mode only (?sim)
+      mindar.controller.stopProcessVideo();
+      mindar.controller.processVideo(window.__simCanvas);
+    }
+    if (!everFound) hint.classList.remove("off");
+    renderer.setAnimationLoop(() => {
+      renderer.render(scene, camera);
+      cssRenderer.render(cssScene, camera);
+    });
+  }
+</script>
+</body>
+</html>
