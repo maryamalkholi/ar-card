@@ -19,6 +19,7 @@
   #start p { margin:0; max-width:30ch; opacity:.85; line-height:1.5; }
   #go { margin-top:8px; border:0; border-radius:99px; padding:16px 34px; background:var(--cream); color:var(--ink); font:600 16px Inter, system-ui, sans-serif; cursor:pointer; }
   #start .err { color:#FFE1D6; font-size:14px; }
+  #start[hidden] { display:none; }
 
   /* Hint while the card isn't being tracked */
   #hint { position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:40; background:rgba(20,24,20,.75); color:#fff; font-size:14px; padding:10px 16px; border-radius:99px; white-space:nowrap; pointer-events:none; transition:opacity .3s; }
@@ -59,12 +60,12 @@
 <body>
 <div id="ar"></div>
 
-<div id="start">
+<!-- Only shown if the phone won't open the camera by itself -->
+<div id="start" hidden>
   <img src="assets/face.png" alt="Maryam Alkholi">
   <h1>Maryam Alkholi</h1>
-  <p>Hold the QR side of the card in the middle of your camera view.</p>
-  <button id="go" type="button">Start AR</button>
-  <p class="err" id="err" hidden></p>
+  <p class="err" id="err">Camera access is needed to show the AR card.</p>
+  <button id="go" type="button">Open camera</button>
 </div>
 <div id="hint" class="off">Center the card in your camera view</div>
 
@@ -111,18 +112,25 @@
 
   if (new URLSearchParams(location.search).has("sim")) await import("../tools/sim-camera.js");
 
-  document.getElementById("go").addEventListener("click", async () => {
-    errEl.hidden = true;
+  // Open the camera as soon as the page loads (straight from the QR scan).
+  // If the phone refuses without a tap, show a single "Open camera" button instead.
+  async function launch() {
     try {
+      document.getElementById("ar").innerHTML = "";
       await import("./vendor/mindar/mindar-image-three.prod.js");
       await startAR();
       startEl.remove();
     } catch (e) {
       console.error(e);
-      errEl.textContent = "Couldn't open the camera. Allow camera access for this page and try again.";
-      errEl.hidden = false;
+      document.querySelectorAll(".mindar-ui-overlay").forEach(el => el.remove());
+      startEl.hidden = false;
+      errEl.textContent = navigator.mediaDevices
+        ? "Allow camera access for this page, then tap the button."
+        : "This browser can't open the camera. Try Chrome or Safari.";
     }
-  });
+  }
+  document.getElementById("go").addEventListener("click", launch);
+  launch();
 
   async function startAR() {
     const mindar = new window.MINDAR.IMAGE.MindARThree({
